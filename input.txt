@@ -1,0 +1,7 @@
+;structure file name
+box_solv_neutral.pdb
+;itp_name    nmols  natoms  dih(y/n)   angles(y/n)   bonds(y/n)  write_itp_prms(y/n)
+chain.itp     8   5914        y          y           y                    y
+fmno.itp      8     50        y          y           y                    y
+tip3p.itp   51026    3        n          y           y                    n
+ions.itp     112     1        n          n           n                    n
