@@ -19,19 +19,36 @@ def make_kangle(kang):
 def make_kdih(kdih):
 	new_kdih=float(kdih)/4.184
 	return new_kdih
-
+def make_kcmap(cmap):
+	new_cmap=float(cmap)/4.184
+	return new_cmap
 SCAL_FACT=2
 
-print("\n \nGMX2ORCA Version 1.0  \n \nThis program writes a generic GROMACS topology for any given forcefield in the ORCA QM/MM input format\n  \n The code requires an input.txt file that contains info about:\n 1) The structure of the system in .pdb format \n 2) The .itp files needed\n 3) How many molecules of a specific .itp are present \n 4) The number of atoms of the molecule \n 5) 6) 7) If the molecule has bonds,angles and dihedrals \n 8) If the .itp files need to be written with the ffbonded parameters\n\n\n-------------input file example-----------------\n\n;structure file name\nSystem.pdb\n;itp_name    nmols  natoms  dih(y/n)   angles(y/n)   bonds(y/n)  write_itp_prms(y/n)\nprotein.itp      1  5914        y          y           y                    y\nwater.itp    10000     3        n          y           y                    n\nions.itp        20     1        n          n           n                    n\n\n------------------------------------------------ \n \n \n NOTE 1: For the program to work correctly, the .pdb file needs to have the atom element as last column \n NOTE 2: For the program to work correctly, the .itp files should be in the same directory of the program, along with ffbonded.itp and ffnonbonded.itp \n NOTE 3: The program overwrites the .itp file that need to be manipulated as specified in the input.txt \n NOTE 4: The input .itp should be continous and the dihedral and improper dihedral section should be joined \n NOTE 5: If the program encounters an '#' either stops writing or encounters an error, make sure that there are no # in between section, The ';' is ignored by the program\n\n\n The program is running...")
+print("\n \nGMX2ORCA Version 1.0  \n \nThis program writes a generic GROMACS topology for any given forcefield in the ORCA QM/MM input format\n  \n The code requires an input.txt file that contains info about:\n 1) The structure of the system in .pdb format \n 2) The .itp files needed\n 3) How many molecules of a specific .itp are present \n 4) The number of atoms of the molecule \n 5) 6) 7) If the molecule has bonds,angles and dihedrals \n 8) If the .itp files need to be written with the ffbonded parameters\n\n\n-------------input file example-----------------\n\n;structure file name\nSystem.pdb\n;itp_name    nmols  natoms  dih(y/n)   angles(y/n)   bonds(y/n)  write_itp_prms(y/n)  cmaps(y/n)\nprotein.itp      1  5914        y          y           y                n                  y\nwater.itp    10000     3        n          y           y                n                  n\nions.itp        20     1        n          n           n                n                  n\n\n------------------------------------------------ \n \n \n NOTE 1: For the program to work correctly, the .pdb file needs to have the atom element as last column \n NOTE 2: For the program to work correctly, the .itp files should be in the same directory of the program, along with ffbonded.itp and ffnonbonded.itp \n NOTE 3: The program overwrites the .itp file that need to be manipulated as specified in the input.txt \n NOTE 4: The input .itp should be continous and the dihedral and improper dihedral section should be joined \n NOTE 5: If the program encounters an '#' either stops writing or encounters an error, make sure that there are no # in between section, The ';' is ignored by the program\n\n\n The program is running...")
 file_mod=open("input.txt",'r').read()
 righe_mod=file_mod.splitlines()
 rm=3
 lemon=0
+ccmap=0
+ls_num_cmaps=[]
+for riga in righe_mod:
+	if riga=="":
+		continue
+	if riga.startswith(";"):
+		continue
+	elem=riga.split()
+	if len(elem)<5:
+		continue
+	if elem[7]=="y":
+		ccmap=ccmap+1
 while rm<len(righe_mod):
+	if righe_mod[rm]=="":
+		continue
 	elem=righe_mod[rm].split()
 	if elem[6]=="n":
 		rm=rm+1
 		continue
+	chcmap=elem[7]
 	lemon=lemon+1
 	fbonded=open("ffbonded.itp",'r').read()
 	lines_fbonded=fbonded.splitlines()
@@ -353,7 +370,7 @@ while rm<len(righe_mod):
 			while True:
 				line=lines_fbonded[i]
 				elem=line.split()
-				if line=="[ constrainttypes ]" or line.startswith("#") or line=="[ dihedraltypes ]" or line=="[ dihedraltypes ]" or line=="":
+				if line=="[ constrainttypes ]" or line.startswith("#") or line=="[ dihedraltypes ]" or line=="[ dihedraltypes ]" or line=="" or line=="[ cmap ]":
 					break
 				if line.startswith(";"):
 					i=i+1
@@ -437,7 +454,147 @@ while rm<len(righe_mod):
 	del(ffbonded_dihedrals)
 	del(ffbonded_truedihedrals)
 	fout.close()
+#################################################################################################################### RISCRITTI I DIHEDRALS
+	cmaps=[]
+	num_cmaps=0
+	if chcmap=="n":
+		continue
+	i=0
+	while i<len(itp_lines):
+		line=itp_lines[i]
+		if line=="[ cmap ]":
+			i=i+1
+			while True:
+				line=itp_lines[i]
+				elem=line.split()
+				if line=="[ dihedrals ]" or line=="[ exclusions ]" or line=="[ pairs ]" or line=="" or line.startswith("#"):
+					break
+				if line.startswith(";"):
+					i=i+1
+					continue
+				if len(line)<1:
+					i=i+1
+					continue
+				else:
+					cmaps.append([elem[0],elem[1],elem[2],elem[3],elem[4]])
+					num_cmaps=num_cmaps+1
+					i=i+1
+		i=i+1
+	i=0
+	ls_num_cmaps.append(num_cmaps)
+	ffbonded_cmaps=[]
+	while i<len(cmaps):
+		nesimo_cmap=cmaps[i]
+		conv_cmap=[]
+		j=0
+		counter=0
+		while counter<5:
+			if j>=len(index_atype):
+				j=0
+				continue
+			coppia=index_atype[j]
+			if nesimo_cmap[0]==coppia[0]:
+				conv_cmap.append(coppia[1])
+				counter=counter+1  
+			elif counter==1 and nesimo_cmap[1]==coppia[0]:
+				conv_cmap.append(coppia[1])
+				counter=counter+1
+			elif counter==2 and nesimo_cmap[2]==coppia[0]:
+				conv_cmap.append(coppia[1])
+				counter=counter+1
+			elif counter==3 and nesimo_cmap[2]==coppia[0]:
+				conv_cmap.append(coppia[1])
+				counter=counter+1		
+			elif counter==4 and nesimo_cmap[2]==coppia[0]:
+				conv_cmap.append(coppia[1])
+				counter=counter+1		
+			j=j+1
+		ffbonded_cmaps.append(conv_cmap)
+		i=i+1
+	i=0
+	fcmap=open("cmap.itp",'r').read()
+	lines_fbonded=fcmap.splitlines()
+	lines_fbonded.append("###")
+	ffbonded_truecmaps=[]
+	cmaps_val=[]
+	while i<len(lines_fbonded):
+		line=lines_fbonded[i]
+		if line=="[ cmaptypes ]":
+			i=i+1
+			while True:
+				line=lines_fbonded[i]
+				elem=line.split()
+				if line=="":
+					i=i+1
+					continue
+				if line=="[ constrainttypes ]" or line=="###" or line=="[ cmaptypes ]" or line=="[ dihedraltypes ]":
+					break
+				if line.startswith(";"):
+					i=i+1
+					continue
+				elif len(elem)<2:
+					i=i+1
+					continue
+				else:
+					if (elem[0] in atype) and (elem[1] in atype) and (elem[2] in atype) and (elem[3] in atype) and (elem[4] in atype):
+						ffbonded_truecmaps.append([elem[0],elem[1],elem[2],elem[3],elem[4]])
+						r=0
+						i=i+1
+						single_cmap=[]
+						while r<58:
+							line=lines_fbonded[i][:-2]
+							single_cmap.append(line)
+							i=i+1
+							r=r+1
+						cmaps_val.append(single_cmap)
+						continue
+					else:
+						i=i+1
+		i=i+1	
+	i=0
+	cmaps_correct=[]
+	cmaps_val_correct=[]
+	foutcmap=open("cmap.tmp",'w')
+	while i<len(cmaps):
+		ind1=cmaps[i][0]
+		ind2=cmaps[i][1]
+		ind3=cmaps[i][2]
+		ind4=cmaps[i][3]
+		ind5=cmaps[i][4]
+		t1=ffbonded_cmaps[i][0]
+		t2=ffbonded_cmaps[i][1]
+		t3=ffbonded_cmaps[i][2]
+		t4=ffbonded_cmaps[i][3]
+		t5=ffbonded_cmaps[i][4]
+		ts=[t1,t2,t3,t4,t5]
+		j=0
+		while j<len(ffbonded_truecmaps):
+			elem=ffbonded_truecmaps[j]
+			if all(tx in elem[:4] for tx in ts):
+				foutcmap.write(str(ind1)+" "+str(ind2)+" "+str(ind3)+" "+str(ind4)+" "+str(ind5))
+				#cmaps_correct.append([ind1,ind2,ind3,ind4,ind5])
+				#cmaps_val_correct.append(cmaps_val[j])
+				r=0
+				stringona=" "
+				cmapsval=cmaps_val[j]
+				while r<len(cmapsval):
+					val=cmapsval[r].split()
+					for value in val:
+						stringona=stringona+"   "+value
+					r=r+1
+				foutcmap.write(stringona+"\n")
+				break
+			j=j+1
+		i=i+1
+	foutcmap.close()
+	del(cmaps_val)
+	del(single_cmap)
+	del(cmaps_val_correct)
+	del(cmaps)
+	del(ffbonded_cmaps)
+	del(ffbonded_truecmaps)
 	rm=rm+1
+	fout.close()
 if lemon != 0:
 	print("Wrote itp files")
 else:
@@ -770,6 +927,89 @@ for file_itp in righe_input_itp:
 			iitp=iitp+1
 		j=j+1
 print("Wrote Dihedrals")
+################################################################################################################## SCRITTI I DIEDRI
+fout.write("$cmap"+"\n")
+fout.write("ncmap 8 576"+"\n")
+fcmap=open("cmap.tmp",'r').read()
+cmaps=fcmap.splitlines()
+counter_index=0
+counter_cmp=0
+boundary=0
+cccmap=0
+qxy=0
+mmm=0
+i_indexes=[]
+for file_itp in righe_input_itp:
+	if file_itp=="":
+		continue
+	if qxy<3:
+		qxy=qxy+1
+		continue
+	elem=file_itp.split()
+	if elem[7]=='n':
+		counter_index=counter_index+int(elem[2])
+		continue
+	f_itp=open(elem[0],'r').read()
+	j=0
+	range_cmap=ls_num_cmaps[cccmap]+boundary
+	subset_cmaps=[]
+	while mmm<range_cmap:
+		bbb=cmaps[mmm].split()
+		subset_cmaps.append(cmaps[mmm])
+		i_indexes.append(float(bbb[0]))
+		mmm=mmm+1
+		boundary=ls_num_cmaps[cccmap]
+	cccmap=cccmap+1
+	seen=set()
+	print(i_indexes)
+	i_indexes=[x for x in i_indexes if not (x in seen or seen.add(x))]
+	i_indexes.sort()
+	print(i_indexes)	
+	nmols=int(elem[1])
+	natoms_itp=int(elem[2])
+	j=0
+	while j<nmols:
+		iitp=1
+		kk=0
+		while iitp<=natoms_itp:
+			if iitp not in i_indexes:
+				counter_index=counter_index+1
+				iitp=iitp+1
+				continue
+			kkk=0
+			while kkk<len(subset_cmaps):
+				cmap=subset_cmaps[kkk].split()
+				if int(cmap[0])==i_indexes[kk]:
+					ind1=int(cmap[0])
+					ind2=int(cmap[1])
+					ind3=int(cmap[2])
+					ind4=int(cmap[3])
+					ind5=int(cmap[4])
+					diff1=ind2-ind1
+					diff2=ind3-ind1
+					diff3=ind4-ind1
+					diff4=ind5-ind1
+					i_orca=indexes[counter_index]
+					j_orca=indexes[counter_index+diff1]
+					k_orca=indexes[counter_index+diff2]
+					l_orca=indexes[counter_index+diff3]
+					m_orca=indexes[counter_index+diff4]
+					fout.write(" {} {} {} {} {} {} {} {}".format(int(i_orca),int(j_orca),int(k_orca),int(l_orca),(j_orca),int(k_orca),int(l_orca),int(m_orca))+"\n")### DA FORMATTARE
+					counter_cmp=counter_cmp+1
+					zzz=0
+					r=0
+					lmn=5
+					while r<96:
+						fout.write("{:>13.8f}{:>13.8f}{:>13.8f}{:>13.8f}{:>13.8f}{:>13.8f}".format(float(cmap[lmn]),float(cmap[lmn+1]),float(cmap[lmn+2]),float(cmap[lmn+3]),float(cmap[lmn+4]),float(cmap[lmn+5]))+"\n")
+						lmn=lmn+6
+						r=r+1
+				kkk=kkk+1
+			counter_index=counter_index+1
+			kk=kk+1
+			iitp=iitp+1
+		j=j+1
+
+
 fout.close()
 finprov=open("orca.prms",'r').readlines()
 fout=open(pdb_name+"_ORCAFF.prms",'w')
@@ -790,7 +1030,12 @@ for line in finprov:
 		new_line=str(counter_dih)+line[len("ndih"):]
 		fout.write(new_line)
 		continue
+	elif elem[0]=="ncmap":
+		new_line=str(counter_cmp)+line[len("ncmap"):]
+		fout.write(new_line)
+		continue
 	fout.write(line)
 os.remove("orca.prms")
+os.remove("cmap.tmp")
 	
 	
