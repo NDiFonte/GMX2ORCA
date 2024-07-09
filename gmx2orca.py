@@ -19,7 +19,7 @@ def make_kangle(kang):
 def make_kdih(kdih):
 	new_kdih=float(kdih)/4.184
 	return new_kdih
-def make_kcmap(cmap):
+def make_cmap(cmap):
 	new_cmap=float(cmap)/4.184
 	return new_cmap
 SCAL_FACT=2
@@ -30,7 +30,6 @@ righe_mod=file_mod.splitlines()
 rm=3
 lemon=0
 ccmap=0
-ls_num_cmaps=[]
 for riga in righe_mod:
 	if riga=="":
 		continue
@@ -42,7 +41,7 @@ for riga in righe_mod:
 	if elem[7]=="y":
 		ccmap=ccmap+1
 while rm<len(righe_mod):
-	if righe_mod[rm]=="":
+	if righe_mod[rm]=="" or righe_mod[rm]==" ":
 		continue
 	elem=righe_mod[rm].split()
 	if elem[6]=="n":
@@ -458,6 +457,7 @@ while rm<len(righe_mod):
 	cmaps=[]
 	num_cmaps=0
 	if chcmap=="n":
+		rm=rm+1
 		continue
 	i=0
 	while i<len(itp_lines):
@@ -481,7 +481,6 @@ while rm<len(righe_mod):
 					i=i+1
 		i=i+1
 	i=0
-	ls_num_cmaps.append(num_cmaps)
 	ffbonded_cmaps=[]
 	while i<len(cmaps):
 		nesimo_cmap=cmaps[i]
@@ -951,20 +950,31 @@ for file_itp in righe_input_itp:
 		continue
 	f_itp=open(elem[0],'r').read()
 	j=0
-	range_cmap=ls_num_cmaps[cccmap]+boundary
+	numb_cmaps=0
+	righe_itp=f_itp.splitlines()
+	zzz=0
+	for riga in righe_itp:
+		if riga=="[ cmap ]":
+			zzz=zzz+2
+			while True:
+				riga=righe_itp[zzz]
+				if riga==" " or riga=="" or riga.startswith("#"):
+					break
+				numb_cmaps=numb_cmaps+1
+				zzz=zzz+1
+		zzz=zzz+1
+	range_cmap=numb_cmaps+boundary
 	subset_cmaps=[]
 	while mmm<range_cmap:
 		bbb=cmaps[mmm].split()
 		subset_cmaps.append(cmaps[mmm])
 		i_indexes.append(float(bbb[0]))
 		mmm=mmm+1
-		boundary=ls_num_cmaps[cccmap]
+		boundary=numb_cmaps
 	cccmap=cccmap+1
 	seen=set()
-	print(i_indexes)
 	i_indexes=[x for x in i_indexes if not (x in seen or seen.add(x))]
-	i_indexes.sort()
-	print(i_indexes)	
+	i_indexes.sort()	
 	nmols=int(elem[1])
 	natoms_itp=int(elem[2])
 	j=0
@@ -1000,7 +1010,7 @@ for file_itp in righe_input_itp:
 					r=0
 					lmn=5
 					while r<96:
-						fout.write("{:>13.8f}{:>13.8f}{:>13.8f}{:>13.8f}{:>13.8f}{:>13.8f}".format(float(cmap[lmn]),float(cmap[lmn+1]),float(cmap[lmn+2]),float(cmap[lmn+3]),float(cmap[lmn+4]),float(cmap[lmn+5]))+"\n")
+						fout.write("{:>13.8f}{:>13.8f}{:>13.8f}{:>13.8f}{:>13.8f}{:>13.8f}".format(float(make_cmap(cmap[lmn])),float(make_cmap(cmap[lmn+1])),float(make_cmap(cmap[lmn+2])),float(make_cmap(cmap[lmn+3])),float(make_cmap(cmap[lmn+4])),float(make_cmap(cmap[lmn+5])))+"\n")
 						lmn=lmn+6
 						r=r+1
 				kkk=kkk+1
@@ -1008,8 +1018,6 @@ for file_itp in righe_input_itp:
 			kk=kk+1
 			iitp=iitp+1
 		j=j+1
-
-
 fout.close()
 finprov=open("orca.prms",'r').readlines()
 fout=open(pdb_name+"_ORCAFF.prms",'w')
@@ -1036,6 +1044,6 @@ for line in finprov:
 		continue
 	fout.write(line)
 os.remove("orca.prms")
-os.remove("cmap.tmp")
+#os.remove("cmap.tmp")
 	
 	
